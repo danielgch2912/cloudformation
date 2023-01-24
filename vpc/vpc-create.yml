@@ -1,16 +1,20 @@
 Mappings:
-  SubnetConfig:
+  VpcConfig:
     VPC:
       CIDR: "192.168.0.0/16"
+    Private1:
+      CIDR: "192.168.0.0/24"
+      AZ: "us-east-1c"
     Public1:
       CIDR: "192.168.5.0/24"
+      AZ: "us-east-1c"
 
 Resources:
   MyVpc:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !FindInMap
-        - "SubnetConfig"
+        - "VpcConfig"
         - "VPC"
         - "CIDR"
       InstanceTenancy: default
@@ -22,11 +26,63 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref "MyVpc"
-      AvailabilityZone: "us-east-1c"
+      AvailabilityZone: !FindInMap
+        - "VpcConfig"
+        - "Private1"
+        - "AZ"
       CidrBlock: !FindInMap
-        - "SubnetConfig"
-        - "Public1"
+        - "VpcConfig"
+        - "Private1"
         - "CIDR"
       MapPublicIpOnLaunch: false
       Tags:
-        - Key: "PrivateSubnet1"
+        - Key: "Name"
+          Value: "PrivateSubnet1"
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref "MyVpc"
+      AvailabilityZone: !FindInMap
+        - "VpcConfig"
+        - "Public1"
+        - "AZ"
+      CidrBlock: !FindInMap
+        - "VpcConfig"
+        - "Public1"
+        - "CIDR"
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: "Name"
+          Value: "PublicSubnet1"
+
+  MyVpcIgw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: "Name"
+          Value: "MyVpcIgw"
+
+  MyVpcIgwAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVpc
+      InternetGatewayId: !Ref MyVpcIgw
+
+  MyVpcPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVpc
+
+  MyVpcPublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref MyVpcPublicRouteTable
+      GatewayId: !Ref MyVpcIgw
+      DestinationCidrBlock:  "0.0.0.0/0"
+
+  MyVpcPublicSubnetToTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref MyVpcPublicRouteTable
