@@ -1,0 +1,32 @@
+Mappings:
+  SubnetConfig:
+    VPC:
+      CIDR: "192.168.0.0/16"
+    Public1:
+      CIDR: "192.168.5.0/24"
+
+Resources:
+  MyVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !FindInMap
+        - "SubnetConfig"
+        - "VPC"
+        - "CIDR"
+      InstanceTenancy: default
+      Tags:
+        - Key: "Name"
+          Value: "MyVPC"
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref "MyVpc"
+      AvailabilityZone: "us-east-1c"
+      CidrBlock: !FindInMap
+        - "SubnetConfig"
+        - "Public1"
+        - "CIDR"
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: "PrivateSubnet1"
